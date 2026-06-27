@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cutout Server</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◎</span>
+      <h1>Cutout&nbsp;Server</h1>
+    </div>
+    <div class="subtitle">Multi-survey astronomical image cutouts</div>
+  </header>
+
+  <main>
+    <form id="cutout-form" class="panel">
+      <div class="field grow">
+        <label for="position">Position or object name</label>
+        <input id="position" name="position" type="text" autocomplete="off"
+               placeholder="e.g. M87  ·  187.7059 12.3911  ·  12:30:49.4 +12:23:28" />
+        <small class="hint">Object name (Sesame), decimal degrees, or sexagesimal (RA hms / Dec dms).</small>
+      </div>
+
+      <div class="field">
+        <label for="size">Size (arcmin)</label>
+        <input id="size" name="size" type="number" value="3" min="0.5" max="60" step="0.5" />
+      </div>
+
+      <fieldset class="field surveys">
+        <legend>Surveys</legend>
+        {% for group, items in groups.items() %}
+        <div class="survey-group">
+          <span class="group-name">{{ group }}</span>
+          <div class="checks">
+            {% for s in items %}
+            <span class="survey-item">
+              <label class="chk" title="{{ s.wavelength }}">
+                <input type="checkbox" name="survey" value="{{ s.key }}" data-cmap="{{ s.cmap }}" {{ 'checked' if s.default }} />
+                <span>{{ s.name }}</span>
+                <em>{{ s.wavelength }}</em>
+              </label>
+              {% if s.select %}
+              <select class="sel-select" data-survey="{{ s.key }}" title="{{ s.name }} {{ s.select.label|lower }}">
+                {% for o in s.select.options %}<option value="{{ o.value }}" {{ 'selected' if o.value == s.select.default }}>{{ o.text }}</option>{% endfor %}
+              </select>
+              {% endif %}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </fieldset>
+
+      <div class="field controls">
+        <div class="render-opts">
+          <label>Stretch
+            <select id="stretch">
+              <option value="zscale" selected>zscale</option>
+              <option value="linear">linear</option>
+              <option value="sqrt">sqrt</option>
+              <option value="log">log</option>
+              <option value="asinh">asinh</option>
+            </select>
+          </label>
+          <label>Colormap
+            <select id="cmap">
+              <option value="auto" selected>Auto (by band)</option>
+              <option value="gray">gray</option>
+              <option value="gray_r">gray (inv)</option>
+              <option value="viridis">viridis</option>
+              <option value="inferno">inferno</option>
+              <option value="magma">magma</option>
+              <option value="cividis">cividis</option>
+              <option value="afmhot">afmhot</option>
+              <option value="bone">bone</option>
+            </select>
+          </label>
+          <label class="toggle" title="Keep the cached FITS on disk; otherwise it is deleted once the PNG is generated and re-fetched on download.">
+            <input type="checkbox" id="keep-fits" {{ 'checked' if keep_default }} />
+            <span>Keep FITS cache</span>
+          </label>
+        </div>
+        <button type="submit" id="submit">Get cutouts</button>
+      </div>
+    </form>
+
+    <div id="status" class="status"></div>
+    <div id="results" class="results"></div>
+  </main>
+
+  <footer>
+    Images from <a href="https://skyview.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA SkyView</a>
+    via astroquery · inspired by the
+    <a href="http://cutouts.cirada.ca/" target="_blank" rel="noopener">CIRADA cutout service</a>.
+  </footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
