@@ -41,9 +41,15 @@ function card(result, surveyMeta, opts) {
       ? { stretch: opts.stretch, cmap: meta.cmap || "gray", invert: "0" }
       : opts;
     const src = buildPreviewUrl(result.preview_url, eff);
+    // Observation date: an exact FITS date reads plainly, a survey campaign
+    // span is muted and tagged, matching how the PNG labels the two.
+    const obs = result.obs_date
+      ? `<span class="obs${result.obs_exact ? "" : " approx"}">` +
+        `obs. ${result.obs_date}${result.obs_exact ? "" : " (survey)"}</span>`
+      : `<span class="band">PNG preview</span>`;
     el.innerHTML = head +
       `<div class="imgwrap loading"><img alt="${meta.name} cutout" /></div>` +
-      `<div class="foot"><span class="band">PNG preview</span>` +
+      `<div class="foot">${obs}` +
       `<a href="${result.fits_url}" download>Download FITS</a></div>`;
     const wrap = el.querySelector(".imgwrap");
     const img = el.querySelector("img");
@@ -110,3 +116,14 @@ async function run(ev) {
 }
 
 form.addEventListener("submit", run);
+
+// Per-group "all" / "none" shortcuts — with two dozen radio surveys, ticking
+// boxes one at a time is the slow part of driving this form.
+form.querySelectorAll(".survey-group").forEach(group => {
+  group.querySelectorAll(".linkbtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const on = btn.dataset.pick === "all";
+      group.querySelectorAll('input[name="survey"]').forEach(c => { c.checked = on; });
+    });
+  });
+});

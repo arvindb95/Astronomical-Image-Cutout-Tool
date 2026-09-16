@@ -80,9 +80,26 @@ fieldset.surveys {
 }
 legend { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; padding: 0 6px; }
 
-.survey-group { display: flex; align-items: center; gap: 14px; padding: 6px 0; flex-wrap: wrap; }
-.group-name { width: 78px; color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
-.checks { display: flex; gap: 10px; flex-wrap: wrap; }
+/* A group (Radio / Infrared / Optical) stacks a heading over one row per
+   sub-band; the radio list is long enough that the flat row it used to be no
+   longer reads. */
+.survey-group { padding: 10px 0; border-top: 1px solid var(--border); }
+.survey-group:first-child { border-top: 0; padding-top: 2px; }
+.group-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.group-name { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+.group-actions { display: flex; gap: 4px; }
+.linkbtn {
+  background: none; border: 0; color: var(--muted);
+  font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+  padding: 2px 6px; border-radius: 5px; cursor: pointer;
+}
+.linkbtn:hover { color: var(--accent); background: var(--panel-2); }
+.survey-sub { display: flex; align-items: flex-start; gap: 12px; padding: 4px 0; flex-wrap: wrap; }
+.sub-name {
+  flex: 0 0 160px; padding-top: 9px;
+  color: var(--muted); font-size: 11px; letter-spacing: .3px;
+}
+.checks { display: flex; gap: 10px; flex-wrap: wrap; flex: 1 1 340px; }
 
 .chk {
   display: flex; align-items: center; gap: 7px;
@@ -185,3 +202,8 @@ footer a { color: var(--accent); text-decoration: none; }
   .panel { grid-template-columns: 1fr; }
   .controls { flex-direction: column; align-items: stretch; }
 }
+
+/* Observation date on a result card: exact FITS dates read plainly, survey
+   campaign spans are muted so the two are never confused. */
+.obs { color: var(--text); font-size: 12px; }
+.obs.approx { color: var(--muted); }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import re
 import warnings
 
 import matplotlib
@@ -39,6 +40,7 @@ _STRETCHES = {
 _BG = "#05070c"
 _FG = "#cfd6e4"
 _GRID = "#5ab0ff"
+_MUTED = "#8b93a5"   # for the survey-epoch fallback, to set it apart
 
 
 def _image_hdu(hdul: HDUList):
@@ -76,16 +78,22 @@ def render_png(
     cmap: str = "gray",
     stretch: str = "zscale",
     invert: bool = False,
+    obs_period: str = "",
 ) -> bytes:
     """Return PNG bytes for the cutout, with RA/Dec coordinate axes.
 
     ``stretch`` is one of: zscale, linear, sqrt, log, asinh. ``zscale`` uses the
     classic IRAF z-scale interval; the others use a 99.5% percentile interval.
+
+    ``obs_period`` is the survey's observing campaign (e.g. ``"1993-1997"``),
+    drawn in the corner only when the FITS itself has no observation date. See
+    :func:`_obs_date_from_header` for why most surveys need it.
     """
     hdu = _image_hdu(hdul)
     data = _image_data(hdu)
     wcs = _celestial_wcs(hdu)
     beam = _beam_from_header(hdu.header)
+    obs_date = _obs_date_from_header(hdu.header)
 
     finite = np.isfinite(data)
     if not finite.any():
@@ -134,6 +142,7 @@ def render_png(
             _add_beam(ax, data.shape, wcs, beam)
         else:
             _add_scale_bar(ax, data.shape, wcs)
+    _add_obs_date(ax, obs_date, obs_period)
 
     buf = io.BytesIO()
     fig.savefig(buf, format="PNG", facecolor=_BG)
@@ -199,6 +208,68 @@ def _add_beam(ax, shape, wcs, beam) -> None:
         fontsize=8,
         ha="center",
         va="bottom",
+    )
+
+
+def _obs_date_from_header(header) -> str | None:
+    """Return this image's observation date as ``YYYY-MM-DD``, or ``None``.
+
+    Only some cutouts know when they were taken. VLASS carries a real
+    ``DATE-OBS`` from the archive and Pan-STARRS an ``MJD-OBS``; SkyView strips
+    the date during mosaicking (as it strips the beam) and hips2fits does not
+    propagate one, so for those the caller falls back to the survey's campaign
+    span. GB6 uses the pre-1999 ``DD/MM/YY`` form, which astropy will not parse.
+    """
+    raw = header.get("DATE-OBS") or header.get("DATEOBS")
+    if raw:
+        text = str(raw).strip()
+        iso = re.match(r"^(\d{4})-(\d{2})-(\d{2})", text)
+        if iso:
+            return "-".join(iso.groups())
+        old = re.match(r"^(\d{2})/(\d{2})/(\d{2})$", text)
+        if old:  # old-style FITS: DD/MM/YY, windowed on 1950
+            dd, mm, yy = (int(v) for v in old.groups())
+            year = 1900 + yy if yy >= 50 else 2000 + yy
+            return f"{year:04d}-{mm:02d}-{dd:02d}"
+
+    mjd = header.get("MJD-OBS", header.get("MJDOBS"))
+    if mjd is not None:
+        try:
+            value = float(mjd)
+        except (TypeError, ValueError):
+            return None
+        if value > 0 and np.isfinite(value):
+            from astropy.time import Time
+
+            return Time(value, format="mjd").iso[:10]
+    return None
+
+
+def _add_obs_date(ax, obs_date: str | None, obs_period: str) -> None:
+    """Label the cutout with when it was observed, top-left inside the frame.
+
+    An exact per-image date is shown plainly; a survey campaign span is muted
+    and tagged "(survey)" so it is never mistaken for this image's own date.
+    """
+    if obs_date:
+        text, color = f"obs. {obs_date}", _FG
+    elif obs_period:
+        text, color = f"obs. {obs_period} (survey)", _MUTED
+    else:
+        return
+    ax.text(
+        0.025,
+        0.975,
+        text,
+        transform=ax.transAxes,
+        color=color,
+        fontsize=8,
+        ha="left",
+        va="top",
+        # The backing needs to be fairly opaque: these labels sit over whatever
+        # the cutout happens to show, often a saturated bright field.
+        bbox=dict(boxstyle="round,pad=0.25", facecolor=_BG, edgecolor="none",
+                  alpha=0.8),
     )
 
 

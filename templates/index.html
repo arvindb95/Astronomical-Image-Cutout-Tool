@@ -31,25 +31,36 @@
 
       <fieldset class="field surveys">
         <legend>Surveys</legend>
-        {% for group, items in groups.items() %}
-        <div class="survey-group">
-          <span class="group-name">{{ group }}</span>
-          <div class="checks">
-            {% for s in items %}
-            <span class="survey-item">
-              <label class="chk" title="{{ s.wavelength }}">
-                <input type="checkbox" name="survey" value="{{ s.key }}" data-cmap="{{ s.cmap }}" {{ 'checked' if s.default }} />
-                <span>{{ s.name }}</span>
-                <em>{{ s.wavelength }}</em>
-              </label>
-              {% if s.select %}
-              <select class="sel-select" data-survey="{{ s.key }}" title="{{ s.name }} {{ s.select.label|lower }}">
-                {% for o in s.select.options %}<option value="{{ o.value }}" {{ 'selected' if o.value == s.select.default }}>{{ o.text }}</option>{% endfor %}
-              </select>
-              {% endif %}
+        {% for group, subgroups in groups.items() %}
+        <div class="survey-group" data-group="{{ group }}">
+          <div class="group-head">
+            <span class="group-name">{{ group }}</span>
+            <span class="group-actions">
+              <button type="button" class="linkbtn" data-pick="all">all</button>
+              <button type="button" class="linkbtn" data-pick="none">none</button>
             </span>
-            {% endfor %}
           </div>
+          {% for subgroup, items in subgroups.items() %}
+          <div class="survey-sub">
+            {% if subgroup %}<span class="sub-name">{{ subgroup }}</span>{% endif %}
+            <div class="checks">
+              {% for s in items %}
+              <span class="survey-item">
+                <label class="chk" title="{{ s.name }} · {{ s.wavelength }}{% if s.resolution %} · resolution {{ s.resolution }}{% endif %}{% if s.coverage %} · {{ s.coverage }}{% endif %}">
+                  <input type="checkbox" name="survey" value="{{ s.key }}" data-cmap="{{ s.cmap }}" {{ 'checked' if s.default }} />
+                  <span>{{ s.name }}</span>
+                  <em>{{ s.wavelength }}{% if s.resolution %} · {{ s.resolution }}{% endif %}</em>
+                </label>
+                {% if s.select %}
+                <select class="sel-select" data-survey="{{ s.key }}" title="{{ s.name }} {{ s.select.label|lower }}">
+                  {% for o in s.select.options %}<option value="{{ o.value }}" {{ 'selected' if o.value == s.select.default }}>{{ o.text }}</option>{% endfor %}
+                </select>
+                {% endif %}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
         </div>
         {% endfor %}
       </fieldset>
@@ -92,8 +103,13 @@
   </main>
 
   <footer>
-    Images from <a href="https://skyview.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA SkyView</a>
-    via astroquery · inspired by the
+    Images from <a href="https://skyview.gsfc.nasa.gov/" target="_blank" rel="noopener">NASA SkyView</a>,
+    <a href="https://www.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/" target="_blank" rel="noopener">CADC</a> (VLASS),
+    <a href="https://alasky.cds.unistra.fr/hips-image-services/hips2fits" target="_blank" rel="noopener">CDS hips2fits</a>
+    (RACS, LoLSS, THOR, MeerKAT, Apertif),
+    <a href="https://lofar-surveys.org/" target="_blank" rel="noopener">LOFAR Surveys</a> (LoTSS DR2)
+    and <a href="https://ps1images.stsci.edu/" target="_blank" rel="noopener">STScI</a> (Pan-STARRS) ·
+    inspired by the
     <a href="http://cutouts.cirada.ca/" target="_blank" rel="noopener">CIRADA cutout service</a>.
   </footer>
 

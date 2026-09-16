@@ -2,7 +2,8 @@
 
 A small Flask app that serves image cutouts from multiple sky surveys, modelled
 on the CIRADA cutout service (cutouts.cirada.ca). Surveys are pulled from NASA
-SkyView via astroquery; more can be added in cutout/providers.py.
+SkyView, CADC (VLASS), CDS hips2fits and the LOFAR surveys cutout server; more
+can be added in cutout/providers.py.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask, Response, abort, jsonify, render_template, request, send_file
 
 from cutout.providers import GROUP_ORDER, PROVIDERS, get_provider
-from cutout.render import render_png
+from cutout.render import _image_hdu, _obs_date_from_header, render_png
 from cutout.resolve import ResolveError, resolve_position
 from cutout.service import (
     CutoutError,
@@ -25,7 +26,7 @@ from cutout.service import (
 
 app = Flask(__name__)
 
-MAX_WORKERS = 6
+MAX_WORKERS = 8
 MIN_SIZE_ARCMIN = 0.5
 MAX_SIZE_ARCMIN = 60.0
 
@@ -48,9 +49,12 @@ def _keep_flag() -> bool:
 
 @app.route("/")
 def index():
-    groups: dict[str, list] = {}
+    # group -> subgroup -> [survey info]. Subgroups (the radio frequency bands)
+    # keep their PROVIDERS order; surveys with no subgroup sit under the key ""
+    # and the template renders them without a sub-heading.
+    groups: dict[str, dict[str, list]] = {}
     for p in PROVIDERS:
-        groups.setdefault(p.group, []).append(p.info())
+        groups.setdefault(p.group, {}).setdefault(p.subgroup, []).append(p.info())
     # Order groups by wavelength (Radio, Infrared, Optical); any extra groups
     # fall to the end in their natural order.
     rank = {g: i for i, g in enumerate(GROUP_ORDER)}
@@ -106,8 +110,9 @@ def cutout():
         if option and provider is not None and provider.select is not None:
             result["variant"] = provider.select.render(option)
         try:
-            get_cutout_fits(key, ra, dec, size, option=option)
+            path = get_cutout_fits(key, ra, dec, size, option=option)
             result["available"] = True
+            result.update(_obs_info(path, provider))
             params = f"survey={key}&ra={ra:.5f}&dec={dec:.5f}&size={size:.3f}"
             if option:
                 params += f"&sel={option}"
@@ -161,10 +166,14 @@ def preview():
     stretch = request.args.get("stretch", "zscale")
     invert = request.args.get("invert", "0") in ("1", "true", "yes")
     keep = _keep_flag()
+    provider = get_provider(key)
     try:
         path = get_cutout_fits(key, ra, dec, size, option=option)
         with load_fits(path) as hdul:
-            png = render_png(hdul, cmap=cmap, stretch=stretch, invert=invert)
+            png = render_png(
+                hdul, cmap=cmap, stretch=stretch, invert=invert,
+                obs_period=provider.obs_period if provider else "",
+            )
     except CutoutError as exc:
         abort(404, str(exc))
     except Exception as exc:  # noqa: BLE001
@@ -197,6 +206,20 @@ def fits_download():
         as_attachment=True,
         download_name=fname,
     )
+
+
+def _obs_info(path: str, provider) -> dict:
+    """When this cutout was observed: the FITS date if it has one, else the
+    survey's campaign span. ``exact`` tells the UI which of the two it got."""
+    try:
+        with load_fits(path) as hdul:
+            date = _obs_date_from_header(_image_hdu(hdul).header)
+    except Exception:  # noqa: BLE001 - a header we can't read is not fatal here
+        date = None
+    if date:
+        return {"obs_date": date, "obs_exact": True}
+    period = provider.obs_period if provider else ""
+    return {"obs_date": period, "obs_exact": False} if period else {}
 
 
 def _cutout_params():

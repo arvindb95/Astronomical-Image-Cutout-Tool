@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 
 from cutout.providers import PROVIDERS
 from cutout.resolve import resolve_position
-from cutout.service import seed_demo_fits
+from cutout.service import CutoutError, seed_demo_fits
 
 DEMO_OBJECT = "M87"
 DEMO_SIZE_ARCMIN = 3.0
@@ -29,11 +29,20 @@ def main() -> None:
     ra, dec = float(coord.ra.deg), float(coord.dec.deg)
     print(f"Seeding {name} ({label})  ra={ra:.5f} dec={dec:+.5f}")
 
+    seeded = skipped = 0
     for p in (p for p in PROVIDERS if p.default):
         option = (p.select.default or None) if p.select else None
-        path = seed_demo_fits(p.key, ra, dec, DEMO_SIZE_ARCMIN, option=option)
+        try:
+            path = seed_demo_fits(p.key, ra, dec, DEMO_SIZE_ARCMIN, option=option)
+        except CutoutError as exc:
+            # Not every default survey reaches M87 — LoTSS and SUMSS, say, cover
+            # other parts of the sky. Those cards just render "no coverage".
+            print(f"  {p.key:11} -- skipped ({exc})")
+            skipped += 1
+            continue
         print(f"  {p.key:11} -> {os.path.basename(path)}")
-    print("Done.")
+        seeded += 1
+    print(f"Done. {seeded} seeded, {skipped} without coverage at {DEMO_OBJECT}.")
 
 
 if __name__ == "__main__":
