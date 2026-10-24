@@ -230,10 +230,14 @@ button#submit:disabled { opacity: .55; cursor: default; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.card .foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 13px; }
+.card .foot {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+  gap: 6px 10px; padding: 10px 13px;
+}
 .card .foot a {
   color: var(--accent); text-decoration: none; font-size: 13px;
   border: 1px solid var(--border); border-radius: 7px; padding: 5px 10px;
+  white-space: nowrap;   /* the button never splits; it wraps below the date instead */
 }
 .card .foot a:hover { border-color: var(--accent); background: var(--panel-2); }
 .card.unavailable { background: transparent; border-style: dashed; box-shadow: none; }

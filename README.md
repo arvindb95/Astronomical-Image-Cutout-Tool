@@ -192,6 +192,9 @@ the bundled `.ttf` with matplotlib, so the axis labels on the images match the
 page. The font is distributed under the SIL Open Font License 1.1; its license
 travels with it in `static/fonts/OFL.txt`.
 
+The screenshot under [Example: M87](#example-m87) shows the current theme and
+typeface, including Adwaita Sans in the preview axis labels.
+
 - **Selected surveys are highlighted.** A ticked survey chip gets a saffron
   border and tint, so the current selection reads at a glance rather than only
   from the checkbox.
