@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import os
 import re
 import warnings
 
@@ -28,6 +29,15 @@ from astropy.visualization import (
 )
 from astropy.wcs import WCS
 from matplotlib.colors import Normalize
+from matplotlib import font_manager
+
+# Use the UI's font (bundled in static/fonts/, so no system install needed)
+# for the preview labels; fall back to matplotlib's default if it is missing.
+_FONT = os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                     "static", "fonts", "AdwaitaSans-Regular.ttf")
+if os.path.exists(_FONT):
+    font_manager.fontManager.addfont(_FONT)
+    matplotlib.rcParams["font.family"] = "Adwaita Sans"
 
 _STRETCHES = {
     "linear": LinearStretch,

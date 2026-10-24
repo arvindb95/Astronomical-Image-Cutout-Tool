@@ -185,6 +185,13 @@ defined once as CSS custom properties at the top of `static/style.css`
 (`--saffron-300` … `--saffron-700`, `--bg`, `--panel`, `--border`, …), so the
 palette can be changed in one place.
 
+The typeface is **Adwaita Sans**, bundled in `static/fonts/` so a fresh
+machine renders it without installing anything. The browser loads it as a
+variable `woff2` (one file covers every weight), and the PNG previews register
+the bundled `.ttf` with matplotlib, so the axis labels on the images match the
+page. The font is distributed under the SIL Open Font License 1.1; its license
+travels with it in `static/fonts/OFL.txt`.
+
 - **Selected surveys are highlighted.** A ticked survey chip gets a saffron
   border and tint, so the current selection reads at a glance rather than only
   from the checkbox.
@@ -254,6 +261,7 @@ templates/
   index.html           search UI (dark saffron-on-charcoal theme)
   viewer.html          linked multi-pane viewer
 static/                style.css (theme tokens), app.js, viewer.css, favicon.svg
+  fonts/               Adwaita Sans (woff2 for the browser, ttf for matplotlib) + OFL.txt
 scripts/
   check_resolve.py     verify the coordinate parser against its format table
   seed_demo.py         seed the bundled M87 demo cache (demo_cache/)

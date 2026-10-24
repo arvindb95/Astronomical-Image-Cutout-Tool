@@ -33,11 +33,14 @@ _BORDER = "#2c3039"
 _TEXT = "#eceae6"
 _MUTED = "#9a9fab"
 _SAFFRON = "#ff9933"
+# Loaded by the page via @font-face in static/style.css; fonts are
+# document-wide, so the canvas text and shadow-DOM widgets can use it too.
+_FONT = '"Adwaita Sans", sans-serif'
 
 # Bokeh 3 renders widgets in shadow DOM, so page CSS cannot reach them; each
 # widget gets this sheet instead.
 _WIDGET_CSS = f"""
-:host {{ --font-size: 13px; }}
+:host {{ --font-size: 13px; font-family: {_FONT}; }}
 .bk-btn {{
   background: #1c1f26; color: {_TEXT}; border: 1px solid {_BORDER};
   border-radius: 8px; font-weight: 600;
@@ -195,10 +198,13 @@ def build_layout(panes: List[dict], ra: float, dec: float, size_arcmin: float,
             axis.axis_label_text_color = _MUTED
             axis.major_label_text_color = _MUTED
             axis.axis_line_color = _BORDER
+            axis.axis_label_text_font = _FONT
+            axis.major_label_text_font = _FONT
         fig.grid.grid_line_color = "#5ab0ff"
         fig.grid.grid_line_alpha = 0.12
         fig.title.text_color = _TEXT
         fig.title.text_font_size = "11px"
+        fig.title.text_font = _FONT
 
         # Built-in $x/$y only — no CustomJSHover, which does not survive
         # embedding and broke an earlier attempt at this.

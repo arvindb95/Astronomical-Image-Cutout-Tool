@@ -1,3 +1,20 @@
+/* Adwaita Sans ships with the app (static/fonts/, SIL OFL 1.1) so every machine
+   renders the same face. Variable font: one file covers weights 100-900. */
+@font-face {
+  font-family: "Adwaita Sans";
+  src: url("fonts/AdwaitaSans-Regular.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Adwaita Sans";
+  src: url("fonts/AdwaitaSans-Italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* Saffron on charcoal. The neutrals are de-saturated (neither navy nor
    brown) so the saffron accent carries all the colour in the chrome and the
    survey images stay the most colourful thing on the page. */
@@ -24,9 +41,12 @@
   --good: #4ade80;
   --bad: #ff7a6b;
   --shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  --font: "Adwaita Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
+/* Form controls don't inherit the page font by default. */
+button, input, select, textarea { font-family: inherit; }
 
 body {
   margin: 0;
@@ -35,7 +55,7 @@ body {
     radial-gradient(900px 500px at -10% 0%, rgba(122, 52, 18, 0.14) 0%, transparent 55%),
     var(--bg);
   color: var(--text);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 15px/1.5 var(--font);
   min-height: 100vh;
 }
 
