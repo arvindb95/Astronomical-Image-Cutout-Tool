@@ -37,10 +37,13 @@ _STRETCHES = {
 }
 
 # Dark-theme palette to match the UI.
-_BG = "#05070c"
-_FG = "#cfd6e4"
+_BG = "#0d0e11"
+_FG = "#d9d6d0"
+# In-image overlays deliberately stay cool blue rather than the UI's saffron:
+# radio previews use afmhot, and a saffron beam would vanish into the map.
 _GRID = "#5ab0ff"
-_MUTED = "#8b93a5"   # for the survey-epoch fallback, to set it apart
+_BEAM = "#5ab0ff"
+_MUTED = "#9a9fab"   # for the survey-epoch fallback, to set it apart
 
 
 def _image_hdu(hdul: HDUList):
@@ -123,10 +126,10 @@ def render_png(
     # origin="lower" + WCS gives the conventional north-up / east-left view
     # without manually flipping the array.
     if wcs is not None:
-        ax = fig.add_axes([0.17, 0.13, 0.80, 0.83], projection=wcs)
+        ax = fig.add_axes([0.21, 0.13, 0.76, 0.83], projection=wcs)
         _style_wcs_axes(ax)
     else:
-        ax = fig.add_axes([0.17, 0.13, 0.80, 0.83])
+        ax = fig.add_axes([0.21, 0.13, 0.76, 0.83])
         ax.set_facecolor(_BG)
         ax.tick_params(colors=_FG, labelsize=8)
         for spine in ax.spines.values():
@@ -148,6 +151,32 @@ def render_png(
     fig.savefig(buf, format="PNG", facecolor=_BG)
     plt.close(fig)
     return buf.getvalue()
+
+
+def flatten_to_2d(hdul: HDUList) -> HDUList:
+    """Return a single-HDU copy carrying just the 2-D plane and its celestial WCS.
+
+    VLASS cutouts arrive as NAXIS=4 ``(1, 1, ny, nx)`` cubes with a 4-D WCS, and
+    several hips2fits products carry degenerate axes too. Browser viewers cope
+    poorly with that: the extra axes either break the WCS or are read as a cube,
+    and a viewer whose WCS is wrong cannot align panes on the sky.
+
+    The pixel grid is untouched — only length-1 axes are dropped — so each survey
+    keeps its native resolution. Reuses the same helpers as the PNG path so both
+    renderers agree on which HDU, plane and WCS a cutout means.
+    """
+    from astropy.io import fits
+
+    hdu = _image_hdu(hdul)
+    data = _image_data(hdu)
+    wcs = _celestial_wcs(hdu)
+    header = wcs.to_header() if wcs is not None else fits.Header()
+    # Carry over the cards a viewer (or a DS9 round-trip) still wants.
+    for key in ("BMAJ", "BMIN", "BPA", "BUNIT", "DATE-OBS", "DATE-END",
+                "MJD-OBS", "TELESCOP", "INSTRUME", "SURVEY", "OBJECT"):
+        if key in hdu.header and key not in header:
+            header[key] = (hdu.header[key], hdu.header.comments[key])
+    return fits.HDUList([fits.PrimaryHDU(data=data, header=header)])
 
 
 def _beam_from_header(header):
@@ -194,7 +223,7 @@ def _add_beam(ax, shape, wcs, beam) -> None:
         width=bmaj_pix,
         height=bmin_pix,
         angle=90.0 + bpa_deg,
-        facecolor=_GRID,
+        facecolor=_BEAM,
         edgecolor="white",
         linewidth=0.8,
         alpha=0.9,
@@ -322,7 +351,13 @@ def _style_wcs_axes(ax) -> None:
     ra.set_axislabel("RA (J2000)", color=_FG, fontsize=9)
     dec.set_axislabel("Dec (J2000)", color=_FG, fontsize=9)
     ra.set_ticklabel(color=_FG, size=8)
+    # Full signed label on every Dec tick. WCSAxes otherwise abbreviates all
+    # but one to bare arcminutes, so a southern field reads 48', 47', -45°46'
+    # going up and looks as if Dec decreases northwards (the sign is hidden).
+    # astropy 6.1 has no switch for this, so keep only the sort step of
+    # simplify_labels and skip the prefix stripping.
     dec.set_ticklabel(color=_FG, size=8)
+    dec.ticklabels.simplify_labels = dec.ticklabels.sort
     ra.set_ticks(color=_FG)
     dec.set_ticks(color=_FG)
     ra.set_major_formatter("hh:mm:ss")

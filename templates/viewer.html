@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linked Viewer · Astronomical Image Cutout Tool</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='viewer.css') }}" />
+  {{ bokeh_resources|safe }}
+</head>
+<body class="viewer-body">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◎</span>
+      <h1>Cutout&nbsp;Viewer</h1>
+    </div>
+    <div class="subtitle">
+      {% if name %}<b>{{ name }}</b> · {% endif %}{{ label }} · {{ '%.1f'|format(size) }}′ field
+    </div>
+    <a class="backlink" href="/">← back to grid</a>
+  </header>
+
+  <!-- Display options are server-side: the panes are rendered in Python, so
+       changing one reloads the page with new parameters. -->
+  <form class="viewer-toolbar" method="get" action="/viewer">
+    <input type="hidden" name="ra" value="{{ ra }}" />
+    <input type="hidden" name="dec" value="{{ dec }}" />
+    <input type="hidden" name="size" value="{{ size }}" />
+    <input type="hidden" name="panes" value="{{ panes_param }}" />
+    <input type="hidden" name="label" value="{{ label }}" />
+    <input type="hidden" name="name" value="{{ name }}" />
+
+    <label>Columns
+      <select name="cols" onchange="this.form.submit()">
+        {% for c in [1, 2, 3, 4, 5] %}
+        <option value="{{ c }}" {{ 'selected' if c == cols }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Colour
+      <select name="cmap" onchange="this.form.submit()">
+        <option value="auto" {{ 'selected' if cmap_mode == 'auto' }}>Auto (by band)</option>
+        {% for c in ['gray', 'viridis', 'inferno', 'magma', 'cividis', 'afmhot', 'bone'] %}
+        <option value="{{ c }}" {{ 'selected' if cmap_mode == c }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Scale
+      <select name="stretch" onchange="this.form.submit()">
+        <option value="zscale" {{ 'selected' if stretch == 'zscale' }}>zscale</option>
+        <option value="percentile" {{ 'selected' if stretch == 'percentile' }}>99.5%</option>
+      </select>
+    </label>
+
+    <p class="tb-note">
+      Scroll to zoom, drag to pan — every pane follows, matched on the sky.
+      Pick the <b>point-draw</b> tool in a pane's toolbar to drop a region; it
+      appears in all panes at the same position and angular size.
+    </p>
+  </form>
+
+  <main class="viewer-main">
+    {% if missing %}
+    <aside class="viewer-side">
+      <div class="side-head"><span>No coverage</span></div>
+      {% for m in missing %}
+      <div class="missing-row">
+        <span>{{ m.name }}{% if m.variant %} · {{ m.variant }}{% endif %}</span>
+        <em>{{ m.error }}</em>
+      </div>
+      {% endfor %}
+    </aside>
+    {% endif %}
+
+    <section class="bokeh-wrap">
+      {% if bokeh_div %}
+        {{ bokeh_div|safe }}
+      {% else %}
+        <p class="nocov">None of the requested surveys cover this position.</p>
+      {% endif %}
+    </section>
+  </main>
+
+  <footer class="status">
+    {{ panes|length }} pane(s) · axes are arcsecond offsets from the field centre,
+    so pan, zoom and regions are matched on the sky regardless of each survey's
+    pixel scale.
+  </footer>
+
+  {{ bokeh_script|safe }}
+</body>
+</html>

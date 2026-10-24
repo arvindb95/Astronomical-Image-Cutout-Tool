@@ -3,14 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cutout Server</title>
+  <title>Astronomical Image Cutout Tool</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml" />
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <span class="logo">◎</span>
-      <h1>Cutout&nbsp;Server</h1>
+      <h1>Astronomical Image Cutout Tool</h1>
     </div>
     <div class="subtitle">Multi-survey astronomical image cutouts</div>
   </header>
@@ -20,8 +21,9 @@
       <div class="field grow">
         <label for="position">Position or object name</label>
         <input id="position" name="position" type="text" autocomplete="off"
-               placeholder="e.g. M87  ·  187.7059 12.3911  ·  12:30:49.4 +12:23:28" />
-        <small class="hint">Object name (Sesame), decimal degrees, or sexagesimal (RA hms / Dec dms).</small>
+               placeholder="e.g. M87  ·  187.7059 12.3911  ·  12:30:49.4 +12:23:28  ·  J123049.4+122328" />
+        <small class="hint">Object name (Sesame) · decimal degrees · sexagesimal · 12h30m49.4s +12d23m28s ·
+          compact IAU (J123049.4+122328) · galactic (<code>l=283.78 b=74.49</code>).</small>
       </div>
 
       <div class="field">
@@ -98,7 +100,11 @@
       </div>
     </form>
 
-    <div id="status" class="status"></div>
+    <div class="statusbar">
+      <div id="status" class="status"></div>
+      <a id="open-viewer" class="viewer-btn" hidden target="_blank" rel="noopener"
+         title="Open these cutouts in linked panes that pan, zoom and share regions together, matched on the sky">Open in viewer ↗</a>
+    </div>
     <div id="results" class="results"></div>
   </main>
 

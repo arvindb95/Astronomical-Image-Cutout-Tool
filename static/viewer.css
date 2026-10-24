@@ -1,0 +1,46 @@
+/* Viewer page. Loaded after style.css so the dark-theme variables are available. */
+
+.viewer-body { display: flex; flex-direction: column; min-height: 100vh; }
+.topbar .backlink { margin-left: auto; color: var(--accent); font-size: 13px; text-decoration: none; }
+.topbar .backlink:hover { text-decoration: underline; }
+
+.viewer-toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 18px;
+  padding: 10px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.viewer-toolbar label { display: flex; flex-direction: column; gap: 4px; }
+.viewer-toolbar select {
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 6px 8px; font-size: 13px; outline: none;
+}
+.tb-note {
+  margin: 0; flex: 1 1 320px; min-width: 260px;
+  color: var(--muted); font-size: 12px; line-height: 1.5;
+}
+.tb-note b { color: var(--text); font-weight: 600; }
+
+.viewer-main { display: flex; flex: 1; align-items: flex-start; }
+
+.viewer-side {
+  flex: 0 0 210px;
+  padding: 14px;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.side-head {
+  color: var(--accent); font-size: 12px; text-transform: uppercase;
+  letter-spacing: .5px; margin-bottom: 2px;
+}
+.missing-row { display: flex; flex-direction: column; font-size: 12px; color: var(--text); }
+.missing-row em { color: var(--muted); font-style: normal; font-size: 11px; }
+
+.bokeh-wrap { flex: 1; padding: 14px; overflow-x: auto; }
+
+/* Bokeh's own widgets live in shadow DOM and are themed from Python
+   (_WIDGET_CSS in cutout/bokehview.py); page CSS cannot reach them. */
+.viewer-toolbar select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--saffron-ring); }
+
+.nocov { color: var(--muted); padding: 24px; }
+footer.status { padding: 10px 18px; border-top: 1px solid var(--border); }

@@ -1,1 +1,1 @@
-"""Astronomical image cutout server — core package."""
+"""Astronomical Image Cutout Tool — core package."""

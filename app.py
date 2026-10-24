@@ -1,4 +1,4 @@
-"""Astronomical image cutout server.
+"""Astronomical Image Cutout Tool.
 
 A small Flask app that serves image cutouts from multiple sky surveys, modelled
 on the CIRADA cutout service (cutouts.cirada.ca). Surveys are pulled from NASA
@@ -109,6 +109,7 @@ def cutout():
         result = {"key": key}
         if option and provider is not None and provider.select is not None:
             result["variant"] = provider.select.render(option)
+            result["option"] = option  # raw value, for building viewer pane specs
         try:
             path = get_cutout_fits(key, ra, dec, size, option=option)
             result["available"] = True
@@ -205,6 +206,99 @@ def fits_download():
         mimetype="application/fits",
         as_attachment=True,
         download_name=fname,
+    )
+
+
+@app.route("/viewer")
+def viewer():
+    """Linked multi-pane viewer.
+
+    ``panes`` is a comma list of ``key`` or ``key:option`` (e.g.
+    ``first,nvss,vlass_ql:2,panstarrs:r``). Survey metadata is rebuilt here from
+    PROVIDERS rather than carried in the URL, so the link stays short and always
+    reflects the current registry.
+
+    The panes are rendered server-side with Bokeh: every one is plotted in
+    arcsecond offsets from the field centre, so sharing the axis ranges links
+    pan and zoom on the sky rather than in pixels.
+    """
+    from cutout.bokehview import build_layout
+
+    try:
+        ra = float(request.args.get("ra"))
+        dec = float(request.args.get("dec"))
+        size = float(request.args.get("size", "3"))
+    except (TypeError, ValueError):
+        abort(400, "Missing or invalid ra/dec/size.")
+    size = max(MIN_SIZE_ARCMIN, min(MAX_SIZE_ARCMIN, size))
+    stretch = request.args.get("stretch", "zscale")
+    cmap_mode = request.args.get("cmap", "auto")
+    try:
+        cols = max(1, min(5, int(request.args.get("cols", "3"))))
+    except ValueError:
+        cols = 3
+
+    specs = [x.strip() for x in (request.args.get("panes") or "").split(",") if x.strip()]
+
+    # Fetch every pane first, in parallel, so one slow survey does not serialise
+    # the whole page. Same fan-out as /api/cutout.
+    def _prepare(spec: str) -> dict:
+        key, _, option = spec.partition(":")
+        provider = get_provider(key)
+        if provider is None:
+            return {"spec": spec, "error": f"unknown survey '{key}'"}
+        info = provider.info()
+        info["spec"] = spec
+        info["option"] = option
+        info["variant"] = (
+            provider.select.render(option)
+            if option and provider.select is not None else ""
+        )
+        try:
+            path = get_cutout_fits(key, ra, dec, size, option=option or None)
+        except CutoutError as exc:
+            info["error"] = str(exc)
+            return info
+        except Exception as exc:  # noqa: BLE001
+            info["error"] = str(exc)
+            return info
+        info["path"] = path
+        info["obs"] = _obs_info(path, provider).get("obs_date", "")
+        return info
+
+    prepared = {}
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        for fut in as_completed([pool.submit(_prepare, s) for s in specs]):
+            row = fut.result()
+            prepared[row["spec"]] = row
+    panes = [prepared[s] for s in specs if s in prepared]
+
+    ok = [p for p in panes if p.get("path")]
+    missing = [p for p in panes if not p.get("path")]
+
+    script = div = ""
+    if ok:
+        script, div = build_layout(ok, ra, dec, size, stretch=stretch,
+                                   cmap_mode=cmap_mode, cols=cols)
+
+    from bokeh.resources import INLINE
+
+    return render_template(
+        "viewer.html",
+        bokeh_resources=INLINE.render(),
+        bokeh_script=script,
+        bokeh_div=div,
+        panes=ok,
+        missing=missing,
+        ra=ra,
+        dec=dec,
+        size=size,
+        cols=cols,
+        stretch=stretch,
+        cmap_mode=cmap_mode,
+        label=request.args.get("label", ""),
+        name=request.args.get("name", ""),
+        panes_param=",".join(specs),
     )
 
 

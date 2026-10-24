@@ -86,6 +86,8 @@ async function run(ev) {
 
   submitBtn.disabled = true;
   resultsEl.innerHTML = "";
+  const viewerLink = document.getElementById("open-viewer");
+  if (viewerLink) viewerLink.hidden = true;
   setStatus("Resolving position and fetching cutouts… (first fetch from SkyView can take a while)");
 
   const keep = document.getElementById("keep-fits").checked ? "1" : "0";
@@ -105,14 +107,33 @@ async function run(ev) {
     setStatus(`${nameBit}<span class="coord">${p.label}</span> · ${data.size}′ field`, "ok");
 
     const opts = renderOpts();
-    const avail = data.results.filter(r => r.available).length;
+    const available = data.results.filter(r => r.available);
     data.results.forEach(r => resultsEl.appendChild(card(r, surveyMeta, opts)));
-    if (avail === 0) setStatus(statusEl.innerHTML + " · no survey covers this position.", "ok");
+    if (available.length === 0) setStatus(statusEl.innerHTML + " · no survey covers this position.", "ok");
+    updateViewerLink(p, data.size, available);
   } catch (e) {
     setStatus("Network or server error: " + e.message, "err");
   } finally {
     submitBtn.disabled = false;
   }
+}
+
+// Link through to the linked viewer for whatever this search actually returned.
+// A pane is identified by survey key plus the option that produced it, so a
+// fanned-out "all epochs" run opens one pane per epoch.
+function updateViewerLink(position, size, available) {
+  const link = document.getElementById("open-viewer");
+  if (!link) return;
+  if (!available.length) { link.hidden = true; return; }
+  const panes = available.map(r => r.option ? `${r.key}:${r.option}` : r.key);
+  const q = new URLSearchParams({
+    ra: position.ra.toFixed(5), dec: position.dec.toFixed(5), size: String(size),
+    label: position.label || "", name: position.name || "",
+    panes: panes.join(","),
+  });
+  link.href = "/viewer?" + q.toString();
+  link.textContent = `Open ${panes.length} in viewer ↗`;
+  link.hidden = false;
 }
 
 form.addEventListener("submit", run);
